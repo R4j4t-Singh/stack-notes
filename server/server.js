@@ -17,43 +17,55 @@ const io = new Server(server, {
 const prisma = new PrismaClient();
 
 const getNotes = async () => {
-  const notes = await prisma.note.findMany({
-    select: {
-      id: true,
-      description: true,
-    },
-    orderBy: {
-      created_At: "asc",
-    },
-  });
-  return notes;
+  try {
+    const notes = await prisma.note.findMany({
+      select: {
+        id: true,
+        description: true,
+      },
+      orderBy: {
+        created_At: "asc",
+      },
+    });
+    return notes;
+  } catch (error) {
+    console.error(error);
+  }
 };
 
 io.on("connection", async (socket) => {
   console.log("connected");
 
   socket.on("add_note", async (newNote) => {
-    const note = await prisma.note.create({
-      data: newNote,
-    });
-    socket.emit("note_added", note);
+    try {
+      const note = await prisma.note.create({
+        data: newNote,
+      });
+      socket.emit("note_added", note);
 
-    const notes = await getNotes();
-    socket.broadcast.emit("send_notes", notes);
+      const notes = await getNotes();
+      socket.broadcast.emit("send_notes", notes);
+    } catch (error) {
+      console.error(error);
+    }
   });
 
   const notes = await getNotes();
 
   socket.on("delete_note", async (note) => {
-    await prisma.note.delete({
-      where: {
-        id: note.id,
-      },
-    });
-    socket.emit("note_deleted", note.id);
+    try {
+      await prisma.note.delete({
+        where: {
+          id: note.id,
+        },
+      });
+      socket.emit("note_deleted", note.id);
 
-    const notes = await getNotes();
-    socket.broadcast.emit("send_notes", notes);
+      const notes = await getNotes();
+      socket.broadcast.emit("send_notes", notes);
+    } catch (error) {
+      console.error(error);
+    }
   });
 
   socket.emit("send_notes", notes);
